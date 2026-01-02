@@ -1,0 +1,13 @@
+LICENSE
+MANIFEST.in
+README.md
+pyproject.toml
+setup.py
+src/fractionalstd2inner/__init__.py
+src/fractionalstd2inner/fractionals.cpp
+src/fractionalstd2inner/fractionals.pxd
+src/fractionalstd2inner/fractionals.pyx
+src/fractionalstd2inner.egg-info/PKG-INFO
+src/fractionalstd2inner.egg-info/SOURCES.txt
+src/fractionalstd2inner.egg-info/dependency_links.txt
+src/fractionalstd2inner.egg-info/top_level.txt

@@ -1,0 +1,8 @@
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+
+# Bytecode
+__pycache__/
