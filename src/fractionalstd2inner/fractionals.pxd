@@ -40,6 +40,13 @@ cdef extern from "gmp.h":
     void mpz_clear(mpz_t x)
     int mpz_set_str(mpz_t rop, const char* str, int base)
 
+    # ----------------------
+    # GMP functions for powers and roots
+    # ----------------------
+    int mpz_pow_ui(mpz_t rop, mpz_t base, unsigned long int exp)
+    int mpz_root(mpz_t rop, mpz_t base, unsigned long int n)  # returns 1 if exact, 0 if rounded
+    void mpq_inv(mpq_t rop, mpq_t op)
+cdef int _is_perfect_power(mpz_t x, unsigned long int n, mpz_t root)
 # Fraction class definition for Cython
 cdef class Fraction:
     cdef mpq_t value

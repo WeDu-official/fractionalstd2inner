@@ -14,7 +14,7 @@ extensions = [
 
 setup(
     name="fractionalstd2inner",
-    version="1.0.5",
+    version="1.0.6",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     ext_modules=cythonize(extensions, compiler_directives={"language_level": "3"}),

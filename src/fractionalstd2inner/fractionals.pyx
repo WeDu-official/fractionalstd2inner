@@ -4,7 +4,12 @@
 
 from decimal import Decimal, localcontext
 from .fractionals cimport *
-
+cdef int _is_perfect_power(mpz_t x, unsigned long int n, mpz_t root):
+        """
+        Check if x is a perfect nth power.
+        If yes, sets root = x^(1/n) and returns 1, else returns 0.
+        """
+        return mpz_root(root, x, n)  # mpz_root returns 1 if exact, 0 otherwise
 cdef class Fraction:
 
     def __cinit__(self):
@@ -108,7 +113,82 @@ cdef class Fraction:
     def __sub__(self, other): return self._binary_op(other, mpq_sub)
     def __mul__(self, other): return self._binary_op(other, mpq_mul)
     def __truediv__(self, other): return self._binary_op(other, mpq_div)
+    # -----------------------
+    # Powers and roots
+    # -----------------------
 
+    def __pow__(self, object exponent):
+        """
+        Fraction ** exponent
+        Supports integer and Fraction exponents exactly.
+        Raises ValueError if root is not exact.
+        """
+        cdef Fraction result
+        cdef mpz_t num_root, den_root
+        mpz_init(num_root)
+        mpz_init(den_root)
+
+        # Integer exponent
+        if isinstance(exponent, int):
+            result = Fraction()
+            if exponent >= 0:
+                mpz_pow_ui(mpq_numref(result.value), mpq_numref(self.value), exponent)
+                mpz_pow_ui(mpq_denref(result.value), mpq_denref(self.value), exponent)
+            else:
+                mpz_pow_ui(num_root, mpq_denref(self.value), -exponent)
+                mpz_pow_ui(den_root, mpq_numref(self.value), -exponent)
+                mpq_set_num(result.value, num_root)
+                mpq_set_den(result.value, den_root)
+                mpq_canonicalize(result.value)
+            mpz_clear(num_root)
+            mpz_clear(den_root)
+            return result
+
+        # Fraction exponent (a/b)
+        elif isinstance(exponent, Fraction):
+            n, d = exponent.numerator, exponent.denominator
+            # Step 1: take d-th root exactly
+            if not _is_perfect_power(mpq_numref(self.value), d, num_root):
+                mpz_clear(num_root)
+                mpz_clear(den_root)
+                raise ValueError(f"Numerator {self.numerator} is not a perfect {d}-th power")
+            if not _is_perfect_power(mpq_denref(self.value), d, den_root):
+                mpz_clear(num_root)
+                mpz_clear(den_root)
+                raise ValueError(f"Denominator {self.denominator} is not a perfect {d}-th power")
+            # Step 2: raise result to numerator
+            result = Fraction()
+            mpz_pow_ui(mpq_numref(result.value), num_root, abs(n))
+            mpz_pow_ui(mpq_denref(result.value), den_root, abs(n))
+            if n < 0:
+                # reciprocal
+                mpq_inv(result.value, result.value)
+            mpz_clear(num_root)
+            mpz_clear(den_root)
+            return result
+
+        else:
+            raise TypeError(f"Exponent must be int or Fraction, got {type(exponent)}")
+    def __rpow__(self, object base):
+        """
+        Computes base ** self exactly.
+        base can be int or Fraction.
+        Fractional exponents must yield exact roots.
+        """
+        cdef Fraction base_frac
+        if isinstance(base, int):
+            base_frac = Fraction(base)
+        elif isinstance(base, Fraction):
+            base_frac = <Fraction>base
+        else:
+            raise TypeError(f"Base must be int or Fraction, got {type(base)}")
+
+        # Negative base check for fractional exponents
+        if base_frac.numerator < 0 and isinstance(self, Fraction) and self.denominator != 1:
+            raise ValueError("Negative base with fractional exponent cannot be represented as exact Fraction")
+
+        # Delegate to __pow__ logic
+        return base_frac.__pow__(self)
     def __radd__(self, other): return Fraction(other) + self
     def __rsub__(self, other): return Fraction(other) - self
     def __rmul__(self, other): return Fraction(other) * self
